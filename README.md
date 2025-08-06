@@ -67,11 +67,29 @@ or
 ## Command Line Arguments
 
 - `--enabledTools`: Comma-separated list of tools to enable (e.g. "notion_retrieve_page,notion_query_database"). When specified, only the listed tools will be available. If not specified, all tools are enabled.
+- `--http`: Start HTTP server instead of stdio transport (default: false)
+- `--port`: Port for HTTP server, only used with --http (default: 3000)
 
-Read-only tools example (copy-paste friendly):
+### Usage Examples
 
+**Stdio mode (default for MCP):**
+```bash
+node build/index.js
+```
+
+**HTTP mode:**
+```bash
+node build/index.js --http --port 3000
+```
+
+**Read-only tools example (copy-paste friendly):**
 ```bash
 node build/index.js --enabledTools=notion_retrieve_block,notion_retrieve_block_children,notion_retrieve_page,notion_query_database,notion_retrieve_database,notion_search,notion_list_all_users,notion_retrieve_user,notion_retrieve_bot_user,notion_retrieve_comments
+```
+
+**HTTP mode with limited tools:**
+```bash
+node build/index.js --http --port 3000 --enabledTools=notion_retrieve_page,notion_query_database
 ```
 
 ## Advanced Configuration
@@ -118,6 +136,53 @@ You can control the format on a per-request basis by setting the `format` parame
 
 - Use `"markdown"` for better readability when only viewing content
 - Use `"json"` when you need to modify the returned content
+
+### HTTP Transport
+
+The server now supports HTTP transport in addition to the default stdio transport. This enables direct HTTP API access to the Notion MCP server.
+
+**Features:**
+- RESTful HTTP API with JSON-RPC over HTTP
+- Server-Sent Events (SSE) support for streaming responses
+- CORS enabled for cross-origin requests
+- Session management with unique session IDs
+- Supports both GET (for SSE streams) and POST (for JSON-RPC messages) requests
+
+**Starting HTTP Server:**
+```bash
+# Start on default port 3000
+node build/index.js --http
+
+# Start on custom port
+node build/index.js --http --port 8080
+
+# With environment variables
+NOTION_API_TOKEN=your-token node build/index.js --http --port 3000
+```
+
+**HTTP Endpoints:**
+- `GET /` - Establishes SSE connection for streaming responses
+- `POST /` - Send JSON-RPC requests
+- `DELETE /` - Terminate session (when using session management)
+
+**Example HTTP Usage:**
+```bash
+# Send a JSON-RPC request to retrieve a page
+curl -X POST http://localhost:3000 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "notion_retrieve_page",
+      "arguments": {
+        "page_id": "your-page-id",
+        "format": "markdown"
+      }
+    }
+  }'
+```
 
 ## Troubleshooting
 

@@ -4,20 +4,23 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequest,
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/sdk/types.js"; // cspell:ignore modelcontextprotocol
+import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { NotionClientWrapper } from "../client/index.js";
 import { filterTools } from "../utils/index.js";
 import * as schemas from "../types/schemas.js";
 import * as args from "../types/args.js";
 
 /**
- * Start the MCP server
+ * Create and configure the MCP server with request handlers
  */
-export async function startServer(
+function createMCPServer(
   notionToken: string,
   enabledToolsSet: Set<string>,
   enableMarkdownConversion: boolean
@@ -325,6 +328,83 @@ export async function startServer(
     };
   });
 
+  return server;
+}
+
+/**
+ * Start the MCP server with stdio transport
+ */
+export async function startServer(
+  notionToken: string,
+  enabledToolsSet: Set<string>,
+  enableMarkdownConversion: boolean
+) {
+  const server = createMCPServer(notionToken, enabledToolsSet, enableMarkdownConversion);
   const transport = new StdioServerTransport();
   await server.connect(transport);
+}
+
+/**
+ * Start the MCP server with HTTP transport
+ */
+export async function startHttpServer(
+  notionToken: string,
+  enabledToolsSet: Set<string>,
+  enableMarkdownConversion: boolean,
+  port: number = 3000
+) {
+  const server = createMCPServer(notionToken, enabledToolsSet, enableMarkdownConversion);
+  
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (sessionId: string) => {
+      console.log(`HTTP session initialized: ${sessionId}`);
+    },
+  });
+
+  await server.connect(transport);
+
+  const httpServer = createServer(async (req, res) => {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    try {
+      // Parse request body for POST requests
+      let body: unknown;
+      if (req.method === 'POST') {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          chunks.push(chunk);
+        }
+        const rawBody = Buffer.concat(chunks).toString();
+        try {
+          body = JSON.parse(rawBody);
+        } catch {
+          body = rawBody;
+        }
+      }
+
+      await transport.handleRequest(req, res, body);
+    } catch (error) {
+      console.error('Error handling HTTP request:', error);
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+      }
+    }
+  });
+
+  httpServer.listen(port, () => {
+    console.log(`Notion MCP Server running on http://localhost:${port}`);
+  });
+
+  return httpServer;
 }

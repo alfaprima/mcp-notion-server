@@ -7,22 +7,38 @@
  *
  * Command-line Arguments:
  * --enabledTools: Comma-separated list of tools to enable (e.g. "notion_retrieve_page,notion_query_database")
+ * --http: Start HTTP server instead of stdio transport (default: false)
+ * --port: Port for HTTP server, only used with --http (default: 3000)
  *
  * Environment Variables:
  * - NOTION_API_TOKEN: Required. Your Notion API integration token.
  * - NOTION_MARKDOWN_CONVERSION: Optional. Set to "true" to enable
  *   experimental Markdown conversion. If not set or set to any other value,
  *   all responses will be in JSON format regardless of the "format" parameter.
+ *
+ * Usage Examples:
+ * - Stdio mode (default): node build/index.js
+ * - HTTP mode: node build/index.js --http --port 3000
  */
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { startServer } from "./server/index.js";
+import { startServer, startHttpServer } from "./server/index.js";
 
 // Parse command line arguments
 const argv = yargs(hideBin(process.argv))
   .option("enabledTools", {
     type: "string",
     description: "Comma-separated list of tools to enable",
+  })
+  .option("http", {
+    type: "boolean",
+    description: "Start HTTP server instead of stdio transport",
+    default: false,
+  })
+  .option("port", {
+    type: "number",
+    description: "Port for HTTP server (only used with --http)",
+    default: 3000,
   })
   .parseSync();
 
@@ -48,5 +64,11 @@ async function main() {
     process.exit(1);
   }
 
-  await startServer(notionToken, enabledToolsSet, enableMarkdownConversion);
+  if (argv.http) {
+    console.log(`Starting Notion MCP Server in HTTP mode on port ${argv.port}`);
+    await startHttpServer(notionToken, enabledToolsSet, enableMarkdownConversion, argv.port);
+  } else {
+    console.log("Starting Notion MCP Server in stdio mode");
+    await startServer(notionToken, enabledToolsSet, enableMarkdownConversion);
+  }
 }
