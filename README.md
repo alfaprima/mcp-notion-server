@@ -6,8 +6,8 @@ MCP Server for the Notion API, enabling LLM to interact with Notion workspaces. 
 
 Here is a detailed explanation of the steps mentioned above in the following articles:
 
-- English Version: https://dev.to/suekou/operating-notion-via-claude-desktop-using-mcp-c0h
-- Japanese Version: https://qiita.com/suekou/items/44c864583f5e3e6325d9
+- [English Version](https://dev.to/suekou/operating-notion-via-claude-desktop-using-mcp-c0h)
+- [Japanese Version](https://qiita.com/suekou/items/44c864583f5e3e6325d9)
 
 1. **Create a Notion Integration**:
 
@@ -73,21 +73,25 @@ or
 ### Usage Examples
 
 **Stdio mode (default for MCP):**
+
 ```bash
 node build/index.js
 ```
 
 **HTTP mode:**
+
 ```bash
 node build/index.js --http --port 3000
 ```
 
 **Read-only tools example (copy-paste friendly):**
+
 ```bash
 node build/index.js --enabledTools=notion_retrieve_block,notion_retrieve_block_children,notion_retrieve_page,notion_query_database,notion_retrieve_database,notion_search,notion_list_all_users,notion_retrieve_user,notion_retrieve_bot_user,notion_retrieve_comments
 ```
 
 **HTTP mode with limited tools:**
+
 ```bash
 node build/index.js --http --port 3000 --enabledTools=notion_retrieve_page,notion_query_database
 ```
@@ -142,6 +146,7 @@ You can control the format on a per-request basis by setting the `format` parame
 The server now supports HTTP transport in addition to the default stdio transport. This enables direct HTTP API access to the Notion MCP server.
 
 **Features:**
+
 - RESTful HTTP API with JSON-RPC over HTTP
 - Server-Sent Events (SSE) support for streaming responses
 - CORS enabled for cross-origin requests
@@ -149,6 +154,7 @@ The server now supports HTTP transport in addition to the default stdio transpor
 - Supports both GET (for SSE streams) and POST (for JSON-RPC messages) requests
 
 **Starting HTTP Server:**
+
 ```bash
 # Start on default port 3000
 node build/index.js --http
@@ -161,11 +167,13 @@ NOTION_API_TOKEN=your-token node build/index.js --http --port 3000
 ```
 
 **HTTP Endpoints:**
+
 - `GET /` - Establishes SSE connection for streaming responses
 - `POST /` - Send JSON-RPC requests
 - `DELETE /` - Terminate session (when using session management)
 
 **Example HTTP Usage:**
+
 ```bash
 # Send a JSON-RPC request to retrieve a page
 curl -X POST http://localhost:3000 \
@@ -195,6 +203,7 @@ If you encounter permission errors:
 ## Project Structure
 
 The project is organized in a modular way to improve maintainability and readability:
+
 
 ```
 ./
